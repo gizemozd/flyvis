@@ -211,7 +211,7 @@ class Ensemble(dict):
                 else:
                     self._best_ratio = 0
                 if worst is not None:
-                    _context_worst_names = list(self.names[-int(worst * len(self)) :])
+                    _context_worst_names = list(self.names[-int(worst * len(self)):])
                     self._worst_ratio = worst
                 else:
                     self._worst_ratio = 0

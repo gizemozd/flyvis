@@ -27,7 +27,8 @@ __all__ = ["ConnectomeDir", "ConnectomeView"]
 
 
 # -- `Connectome` --------------------------------------------------------------
-@root(flyvision.root_dir / "connectome")
+# @root(flyvision.root_dir / "connectome")
+@root("../data/connectome")
 class ConnectomeDir(Directory):
     """Compiles a connectome graph from average convolutional filters.
 

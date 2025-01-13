@@ -27,7 +27,6 @@ from flyvision.utils.activity_utils import LayerActivity
 from flyvision.utils.nn_utils import n_params, simulation
 from flyvision.utils.dataset_utils import IndexSampler
 from flyvision.utils.tensor_utils import RefTensor, AutoDeref
-from flyvision.datasets.base import SequenceDataset
 import logging
 
 logging = logging.getLogger()
@@ -41,6 +40,8 @@ class Network(nn.Module):
         dynamics: Dynamics config.
         node_config: Node config.
         edge_config: Edge config.
+        connectome_class: Connectome class.
+        dynamics_class: Dynamics class.
 
     Attributes:
         connectome (ConnectomeDir): Connectome.
@@ -114,6 +115,8 @@ class Network(nn.Module):
                 groupby=["source_type", "target_type"],
             ),
         ),
+        connectome_class: Any = ConnectomeDir,
+        dynamics_class: Any = NetworkDynamics,
     ):
         super().__init__()
 
@@ -130,9 +133,9 @@ class Network(nn.Module):
         ).deepcopy()
 
         # Store the connectome, dynamics, and parameters.
-        self.connectome = ConnectomeDir(connectome)
+        self.connectome = connectome_class(connectome)
         self.cell_types = self.connectome.unique_cell_types[:].astype(str)
-        self.dynamics = NetworkDynamics(dynamics)
+        self.dynamics = dynamics_class(dynamics)
 
         # Load constant indices into memory.
         # Store source/target indices.
@@ -661,7 +664,7 @@ class Network(nn.Module):
 
     def stimulus_response(
         self,
-        stim_dataset: SequenceDataset,
+        stim_dataset,
         dt: float,
         indices: Iterable[int] = None,
         t_pre: float = 1.0,
@@ -745,7 +748,7 @@ class Network(nn.Module):
 
     def current_response(
         self,
-        stim_dataset: SequenceDataset,
+        stim_dataset,
         dt: float,
         indices: Iterable[int] = None,
         t_pre: float = 1.0,

@@ -183,7 +183,8 @@ class Lognormal(InitialDistribution):
         if param_config.mode == "mean":
             _values = torch.tensor(param_config.mean).float()
         elif param_config.mode == "sample":
-            # The log is normally distributed and in the class SynCount we take the log, thus the normal distr. here.
+            # The log is normally distributed and in the class SynCount we take the
+            # log, thus the normal distr. here.
             seed = param_config.get("seed", None)
             if seed is not None:
                 torch.manual_seed(seed)
@@ -432,6 +433,36 @@ class SynapseSign(Parameter):
             param_config.get("symmetric", []), self.keys
         )
 
+class SynapseCountValue(Parameter):
+    """Initialize synaptic count values for edge types."""
+    # NOT USED!!!
+    @deepcopy_config
+    def __init__(self, param_config: Namespace, connectome: ConnectomeDir) -> None:
+        edges_dir = connectome.edges
+
+        edges = pd.DataFrame(
+            {k: byte_to_str(edges_dir[k][:]) for k in [*param_config.groupby, "n_syn"]}
+        )
+        grouped_edges = edges.groupby(
+            param_config.groupby, as_index=False, sort=False
+        ).first()
+
+        param_config.source_type = grouped_edges.source_type.values
+        param_config.target_type = grouped_edges.target_type.values
+        param_config.value = grouped_edges.n_syn.values
+
+        self.indices = get_scatter_indices(edges, grouped_edges, param_config.groupby)
+        self.parameter = InitialDistribution(param_config)
+        self.keys = list(
+            zip(
+                param_config.source_type.tolist(),
+                param_config.target_type.tolist(),
+            )
+        )
+        self.symmetry_masks = symmetry_masks(
+            param_config.get("symmetric", []), self.keys
+        )
+
 
 class SynapseCount(Parameter):
     """Initialize synapse counts for edge types."""
@@ -456,8 +487,8 @@ class SynapseCount(Parameter):
 
         param_config.source_type = grouped_edges.source_type.values
         param_config.target_type = grouped_edges.target_type.values
-        param_config.du = grouped_edges.du.values
-        param_config.dv = grouped_edges.dv.values
+        # param_config.du = grouped_edges.du.values
+        # param_config.dv = grouped_edges.dv.values
 
         param_config.mode = "mean"
         param_config.mean = np.log(grouped_edges.n_syn.values)
@@ -468,8 +499,8 @@ class SynapseCount(Parameter):
             zip(
                 param_config.source_type.tolist(),
                 param_config.target_type.tolist(),
-                param_config.du.tolist(),
-                param_config.dv.tolist(),
+                # param_config.du.tolist(),
+                # param_config.dv.tolist(),
             )
         )
         self.symmetry_masks = symmetry_masks(
@@ -492,7 +523,8 @@ class SynapseCountScaling(Parameter):
         ).mean()
 
         # to initialize synapse strengths with 1/<N>_rf
-        syn_strength = 1 / grouped_edges.n_syn.values  # 1/<N>_rf
+        # syn_strength = np.ones_like(grouped_edges.n_syn.values)#
+        syn_strength = 1.0 / grouped_edges.n_syn.values  # 1/<N>_rf
 
         # scale synapse strengths of chemical and electrical synapses
         # individually
@@ -593,7 +625,7 @@ def symmetry_masks(
         # to allow identifiers like [None, "A", None, 0]
         # for parameters that have tuples as keys
         columns = np.arange(identifiers.shape[1] + 1)[
-            np.where((identifiers != None).all(axis=0))
+            np.where((identifiers is not None).all(axis=0))
         ]
         try:
             symmetry_masks.append(
